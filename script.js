@@ -5,6 +5,7 @@ const KEY_LEFT = 37;
 const KEY_UP = 38;
 const KEY_RIGHT = 39;
 const KEY_DOWN = 40;
+const BARRA = 32; 
 
 game = {
     canvas: null,
@@ -29,7 +30,14 @@ function bala(x, y, w) {
     this.y = y;
     this.w = w;
 
-    this.dibujar = function () { }
+    this.dibujar = function () {
+        // Dibujar bala
+        game.ctx.save();
+        game.ctx.fillStyle = game.colorBala;
+        game.ctx.fillRect(this.x, this.y, this.w, this.w);   // ✅ corregido
+        this.y -= 4;
+        game.ctx.restore();
+    }
 }
 
 function jugador(x) {
@@ -52,7 +60,7 @@ function enemigo(x, y) {
     this.num = 14;
     this.fugura = true;
     this.vive = true;
-    this.dibujar = function () { }
+    this.dibujar = function () {}
 }
 
 
@@ -63,7 +71,7 @@ const caratula = () => {
     imagen.src = "imagenes/cara.webp";
 
     imagen.onload = function () {
-        game.caratula = true;   
+        game.caratula = true;
         game.ctx.drawImage(imagen, 0, 0, game.canvas.width, game.canvas.height);
     }
 }
@@ -101,12 +109,32 @@ const verificar = () => {
     if (game.tecla[KEY_RIGHT]) {
         game.x += 10;
     }
+
+    // Limites
+    if (game.x < 0) game.x = 0;
+    if (game.x > game.canvas.width - 30) game.x = game.canvas.width - 30;
+
+    // ✅ Actualizar posición real del jugador
+    game.jugador.x = game.x;
 }
+
 
 const pintar = () => {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
-    game.ctx.beginPath();
     game.jugador.dibujar(game.x);
+
+    // disparo ✅
+    if (game.teclaPulada === BARRA) {
+        game.balas_array.push(new bala(game.jugador.x + 12, game.jugador.y - 3, 5));
+        game.teclaPulada = null;
+    }
+
+    for (var i = 0; i < game.balas_array.length; i++) {
+        if (game.balas_array[i] != null) {
+            game.balas_array[i].dibujar();
+            if (game.balas_array[i].y < 0) game.balas_array[i] = null;
+        }
+    }
 }
 
 
@@ -120,7 +148,6 @@ window.addEventListener("keydown", function (e) {
 window.addEventListener("keyup", function (e) {
     game.tecla[e.keyCode] = false;
 });
-
 
 window.requestAnimationFrame = (function () {
     return window.requestAnimationFrame ||
