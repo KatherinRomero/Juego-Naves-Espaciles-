@@ -60,7 +60,9 @@ function enemigo(x, y) {
     this.num = 14;
     this.fugura = true;
     this.vive = true;
-    this.dibujar = function () {}
+    this.dibujar = function () {
+        game.ctx.drawImage(game.imagenEnemigo,0,0,40,30,this.x,this.y,35,30);
+    }
 }
 
 
@@ -135,6 +137,11 @@ const pintar = () => {
             if (game.balas_array[i].y < 0) game.balas_array[i] = null;
         }
     }
+
+    // enemigos
+    for(var i=0;i<game.enemigos_array.length;i++){
+        game.enemigos_array[i].dibujar();
+    }
 }
 
 
@@ -164,6 +171,17 @@ window.onload = function () {
 
     game.imagen = new Image();
     game.imagen.src = "imagenes/torre.png";
+
+    //enemigos
+    game.imagenEnemigo = new Image();
+    game.imagenEnemigo.src = "imagenes/invader.fw.png";
+    game.imagenEnemigo.onload = function () {
+        for (var i = 0; i < 5; i++) {
+            for(var j=0;j<10;j++){
+                game.enemigos_array.push(new enemigo(40*j, 30 + 42*i));
+            }
+        }
+    }
 
     caratula();
 
