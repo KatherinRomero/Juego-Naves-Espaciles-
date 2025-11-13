@@ -110,6 +110,30 @@ const animar = () => {
     verificar();
     pintar();
     moverEnemigos();
+    coliciones()
+}
+ const coliciones = () => {
+    let enemigo, bala;
+    
+    for(var i=0; i<game.enemigos_array.length; i++){
+        for(var j=0; j<game.balas_array.length; j++){
+            enemigo = game.enemigos_array[i];
+            bala = game.balas_array[j];
+
+            if((enemigo != null) && (bala != null)){
+
+                if((bala.x>enemigo.x) && 
+                (bala.x<enemigo.x+enemigo.w) &&
+                (bala.y>enemigo.y) && 
+                (bala.y<enemigo.y+enemigo.h)){
+                    enemigo.vive = false;
+                    game.enemigos_array[i] = null;
+                    game.balas_array[j] = null;
+                    game.disparo=false;
+                }
+            }
+        }
+    }
 }
 
 
@@ -143,7 +167,7 @@ const pintar = () => {
     }
 
     for (let i = 0; i < game.enemigos_array.length; i++) {
-        if (game.enemigos_array[i]) {
+        if (game.enemigos_array[i] != null){
             game.enemigos_array[i].dibujar();
         }
     }
@@ -161,9 +185,14 @@ function moverEnemigos() {
     let dx = 10 * game.direccion;
     let bajar = false;
 
+    // Filtrar enemigos que existen
+    const enemigosVivos = game.enemigos_array.filter(e => e !== null);
+
+    if (enemigosVivos.length === 0) return; // si no quedan enemigos, no hacer nada
+
     // calcular límites del grupo
-    let enemigoDerecha = Math.max(...game.enemigos_array.map(e => e.x + e.w));
-    let enemigoIzquierda = Math.min(...game.enemigos_array.map(e => e.x));
+    let enemigoDerecha = Math.max(...enemigosVivos.map(e => e.x + e.w));
+    let enemigoIzquierda = Math.min(...enemigosVivos.map(e => e.x));
 
     if (enemigoDerecha + dx >= game.canvas.width) {
         game.direccion = -1;
@@ -173,11 +202,10 @@ function moverEnemigos() {
         bajar = true;
     }
 
-    for (let enemigo of game.enemigos_array) {
+    for (let enemigo of enemigosVivos) {
         enemigo.mover(dx, bajar);
     }
 }
-
 
 //---------------------- LISTENERS ----------------------
 
