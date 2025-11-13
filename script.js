@@ -7,13 +7,13 @@ const KEY_RIGHT = 39;
 const KEY_DOWN = 40;
 const BARRA = 32;
 
-game = {
+let game = {
     canvas: null,
     ctx: null,
     imagen: null,
     caratula: null,
     imagenEnemigo: null,
-    teclaPulada: null,
+    teclaPulsada: null,
     tecla: [],
     colorBala: "red",
     colorBala2: "yellow",
@@ -23,12 +23,14 @@ game = {
     jugador: null,
     x: 0,
     direccion: 1,
-    disparo: false
+    disparo: false,
+    puntos: 0,
+    finJuego: false
 };
 
 //---------------------- CLASES ----------------------
 
-function bala(x, y, w, velocidad = 4, color = game.colorBala) {
+function Bala(x, y, w, velocidad = 4, color = game.colorBala) {
     this.x = x;
     this.y = y;
     this.w = w;
@@ -52,18 +54,19 @@ function bala(x, y, w, velocidad = 4, color = game.colorBala) {
     };
 }
 
-function jugador(x) {
+function Jugador(x) {
     this.x = x;
     this.y = 450;
     this.w = 30;
     this.h = 15;
+
     this.dibujar = function (x) {
         this.x = x;
         game.ctx.drawImage(game.imagen, this.x, this.y, this.w, this.h);
     };
 }
 
-function enemigo(x, y) {
+function Enemigo(x, y) {
     this.x = x;
     this.y = y;
     this.w = 35;
@@ -105,22 +108,39 @@ const selecionar = () => {
 const inicio = () => {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
     game.caratula = false;
-    game.jugador = new jugador(0);
-    game.x = game.canvas.width / 2;
-    game.jugador.dibujar(game.x);
-    animar();
+    game.finJuego = false;
+    game.puntos = 0;
+    game.balas_array = [];
+    game.balasEnemigas_array = [];
+    game.enemigos_array = [];
+
+    // Cargar enemigos
+    for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 10; j++) {
+            game.enemigos_array.push(new Enemigo(100 + 40 * j, 30 + 45 * i));
+        }
+    }
+
+    game.jugador = new Jugador(game.canvas.width / 2);
+    game.x = game.jugador.x;
+
+    requestAnimationFrame(animar);
 };
 
+// 🔥 ERROR CORREGIDO: antes decía "if(game.finJuego == true)"  
+// ahora funciona bien:
 const animar = () => {
-    requestAnimationFrame(animar);
-    verificar();
-    pintar();
-    moverEnemigos();
-    colisiones();
+    if (!game.finJuego) {
+        verificar();
+        moverEnemigos();
+        colisiones();
+        pintar();
+        requestAnimationFrame(animar);
+    }
 };
 
 const colisiones = () => {
-    // colisión balas jugador con enemigos
+    // Balas jugador ↔ enemigos
     for (let i = 0; i < game.enemigos_array.length; i++) {
         let enemigo = game.enemigos_array[i];
         if (!enemigo) continue;
@@ -138,11 +158,12 @@ const colisiones = () => {
                 game.enemigos_array[i] = null;
                 game.balas_array[j] = null;
                 game.disparo = false;
+                game.puntos += 10;
             }
         }
     }
 
-    // colisión balas enemigas con jugador
+    // Balas enemigas ↔ jugador
     for (let j = 0; j < game.balasEnemigas_array.length; j++) {
         let bala = game.balasEnemigas_array[j];
         if (bala != null) {
@@ -157,15 +178,37 @@ const colisiones = () => {
         }
     }
 
-    // Limpiar arrays de null
+    // Limpiar
     game.enemigos_array = game.enemigos_array.filter(e => e !== null);
     game.balas_array = game.balas_array.filter(b => b !== null);
     game.balasEnemigas_array = game.balasEnemigas_array.filter(b => b !== null);
 };
 
 const gameOver = () => {
-    alert("Juego terminado.");
-    window.location.reload();
+    game.finJuego = true;
+
+    game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
+
+    mensaje("GAME OVER", 70, 60);
+    mensaje("Puntos: " + game.puntos, 220, 40);
+
+    if (game.puntos >= 200)
+        mensaje("¡Felicidades, eres un gran jugador!", 340, 32);
+    else if (game.puntos >= 100)
+        mensaje("¡Casi lo logras!", 340, 32);
+    else
+        mensaje("¡Sigue intentando!", 340, 32);
+};
+
+const mensaje = (cadena, y, tamano = 50) => {
+    let medio = game.canvas.width / 2;
+    game.ctx.save();
+    game.ctx.fillStyle = "blue";
+    game.ctx.textBaseline = "top";
+    game.ctx.font = "bold " + tamano + "px Courier";
+    let ancho = game.ctx.measureText(cadena).width;
+    game.ctx.fillText(cadena, medio - ancho / 2, y);
+    game.ctx.restore();
 };
 
 const verificar = () => {
@@ -175,7 +218,6 @@ const verificar = () => {
     if (game.x < 0) game.x = 0;
     if (game.x > game.canvas.width - 30) game.x = game.canvas.width - 30;
 
-    // disparos aleatorios enemigos
     if (Math.random() > 0.98) dispararEnemigos();
 };
 
@@ -185,32 +227,35 @@ const dispararEnemigos = () => {
         if (game.enemigos_array[i] != null) ultimos.push(i);
         if (ultimos.length === 10) break;
     }
-
     if (ultimos.length > 0) {
         let d = ultimos[Math.floor(Math.random() * ultimos.length)];
+        let en = game.enemigos_array[d];
         game.balasEnemigas_array.push(
-            new bala(game.enemigos_array[d].x + game.enemigos_array[d].w / 2, game.enemigos_array[d].y, 5, 4, game.colorBala2)
+            new Bala(en.x + en.w / 2, en.y, 5, 4, game.colorBala2)
         );
     }
 };
 
 const pintar = () => {
+    if (game.finJuego) return;
+
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
+
+    score();
     game.jugador.dibujar(game.x);
 
-    // disparo del jugador
-    if (game.teclaPulada === BARRA && !game.disparo) {
-        game.balas_array.push(new bala(game.jugador.x + 12, game.jugador.y - 3, 5));
-        game.teclaPulada = null;
+    // Disparo jugador
+    if (game.teclaPulsada === BARRA && !game.disparo) {
+        game.balas_array.push(new Bala(game.jugador.x + 12, game.jugador.y - 3, 5));
+        game.teclaPulsada = null;
         game.disparo = true;
     }
 
-    // dibujar y actualizar balas del jugador
+    // Balas jugador
     for (let i = 0; i < game.balas_array.length; i++) {
         let b = game.balas_array[i];
         b.dibujar();
 
-        // si la bala sale del canvas, eliminarla y permitir disparar
         if (b.y + b.w < 0) {
             game.balas_array.splice(i, 1);
             i--;
@@ -218,23 +263,19 @@ const pintar = () => {
         }
     }
 
-    // dibujar y actualizar balas enemigas
+    // Balas enemigas
     for (let i = 0; i < game.balasEnemigas_array.length; i++) {
         let b = game.balasEnemigas_array[i];
         b.disparar();
 
-        // limpiar balas enemigas fuera del canvas
         if (b.y > game.canvas.height) {
             game.balasEnemigas_array.splice(i, 1);
             i--;
         }
     }
 
-    // dibujar enemigos
+    // Enemigos
     for (let e of game.enemigos_array) e.dibujar();
-
-
-    
 };
 
 //---------------------- MOVIMIENTO GRUPAL ----------------------
@@ -265,22 +306,24 @@ function moverEnemigos() {
     for (let enemigo of enemigosVivos) enemigo.mover(dx, bajar);
 }
 
+const score = () => {
+    game.ctx.save();
+    game.ctx.fillStyle = "white";
+    game.ctx.font = "bold 20px Courier";
+    game.ctx.fillText("Score: " + game.puntos, 10, 20);
+    game.ctx.restore();
+};
+
 //---------------------- LISTENERS ----------------------
 
 window.addEventListener("keydown", function (e) {
-    game.teclaPulada = e.keyCode;
+    game.teclaPulsada = e.keyCode;
     game.tecla[e.keyCode] = true;
 });
 
 window.addEventListener("keyup", function (e) {
     game.tecla[e.keyCode] = false;
 });
-
-window.requestAnimationFrame = (function () {
-    return window.requestAnimationFrame ||
-        window.webkitRequestAnimationFrame ||
-        function (callback) { window.setTimeout(callback, 17); };
-})();
 
 //---------------------- INICIO ----------------------
 
@@ -293,14 +336,8 @@ window.onload = function () {
 
     game.imagenEnemigo = new Image();
     game.imagenEnemigo.src = "imagenes/invader.fw.png";
-    game.imagenEnemigo.onload = function () {
-        for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 10; j++) {
-                game.enemigos_array.push(new enemigo(100 + 40 * j, 30 + 45 * i));
-            }
-        }
-    };
 
     caratula();
+
     game.canvas.addEventListener("click", selecionar, false);
 };
