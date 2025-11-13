@@ -25,7 +25,11 @@ let game = {
     direccion: 1,
     disparo: false,
     puntos: 0,
-    finJuego: false
+    finJuego: false,
+    boing: null,
+    disparoJugador: null,
+    intro: null,
+    fin: null,
 };
 
 //---------------------- CLASES ----------------------
@@ -159,6 +163,7 @@ const colisiones = () => {
                 game.balas_array[j] = null;
                 game.disparo = false;
                 game.puntos += 10;
+                game.boing.play();
             }
         }
     }
@@ -191,6 +196,7 @@ const gameOver = () => {
 
     mensaje("GAME OVER", 70, 60);
     mensaje("Puntos: " + game.puntos, 220, 40);
+    game.fin.play();
 
     if (game.puntos >= 200)
         mensaje("¡Felicidades, eres un gran jugador!", 340, 32);
@@ -198,6 +204,7 @@ const gameOver = () => {
         mensaje("¡Casi lo logras!", 340, 32);
     else
         mensaje("¡Sigue intentando!", 340, 32);
+    
 };
 
 const mensaje = (cadena, y, tamano = 50) => {
@@ -249,6 +256,7 @@ const pintar = () => {
         game.balas_array.push(new Bala(game.jugador.x + 12, game.jugador.y - 3, 5));
         game.teclaPulsada = null;
         game.disparo = true;
+        game.disparoJugador.play();
     }
 
     // Balas jugador
@@ -330,6 +338,14 @@ window.addEventListener("keyup", function (e) {
 window.onload = function () {
     game.canvas = document.getElementById("canvas");
     game.ctx = game.canvas.getContext("2d");
+
+
+
+ game.boing = document.getElementById("boing");
+ game.disparoJugador = document.getElementById("disparo");
+ game.intro = document.getElementById("intro");
+ game.fin = document.getElementById("fin")
+
 
     game.imagen = new Image();
     game.imagen.src = "imagenes/torre.png";
