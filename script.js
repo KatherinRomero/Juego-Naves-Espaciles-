@@ -18,7 +18,7 @@ game = {
     colorBala: "red",
     colorBala2: "yellow",
     balas_array: [],
-    balasEnemigas_array: [], // ✅ Faltaba inicializar
+    balasEnemigas_array: [],
     enemigos_array: [],
     jugador: null,
     x: 0,
@@ -43,7 +43,6 @@ function bala(x, y, w, velocidad = 4, color = game.colorBala) {
         game.ctx.restore();
     };
 
-    // ✅ método para las balas enemigas
     this.disparar = function () {
         game.ctx.save();
         game.ctx.fillStyle = game.colorBala2;
@@ -56,10 +55,11 @@ function bala(x, y, w, velocidad = 4, color = game.colorBala) {
 function jugador(x) {
     this.x = x;
     this.y = 450;
-
+    this.w = 30;
+    this.h = 15;
     this.dibujar = function (x) {
         this.x = x;
-        game.ctx.drawImage(game.imagen, this.x, this.y, 30, 15);
+        game.ctx.drawImage(game.imagen, this.x, this.y, this.w, this.h);
     };
 }
 
@@ -120,6 +120,7 @@ const animar = () => {
 };
 
 const colisiones = () => {
+    // colisión balas jugador con enemigos
     for (let i = 0; i < game.enemigos_array.length; i++) {
         let enemigo = game.enemigos_array[i];
         if (!enemigo) continue;
@@ -141,10 +142,30 @@ const colisiones = () => {
         }
     }
 
-    // ✅ Limpiar arrays de null
+    // colisión balas enemigas con jugador
+    for (let j = 0; j < game.balasEnemigas_array.length; j++) {
+        let bala = game.balasEnemigas_array[j];
+        if (bala != null) {
+            if (
+                bala.x > game.jugador.x &&
+                bala.x < game.jugador.x + game.jugador.w &&
+                bala.y > game.jugador.y &&
+                bala.y < game.jugador.y + game.jugador.h
+            ) {
+                gameOver();
+            }
+        }
+    }
+
+    // Limpiar arrays de null
     game.enemigos_array = game.enemigos_array.filter(e => e !== null);
     game.balas_array = game.balas_array.filter(b => b !== null);
     game.balasEnemigas_array = game.balasEnemigas_array.filter(b => b !== null);
+};
+
+const gameOver = () => {
+    alert("Juego terminado.");
+    window.location.reload();
 };
 
 const verificar = () => {
@@ -177,15 +198,43 @@ const pintar = () => {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
     game.jugador.dibujar(game.x);
 
+    // disparo del jugador
     if (game.teclaPulada === BARRA && !game.disparo) {
         game.balas_array.push(new bala(game.jugador.x + 12, game.jugador.y - 3, 5));
         game.teclaPulada = null;
         game.disparo = true;
     }
 
-    for (let b of game.balas_array) b.dibujar();
-    for (let b of game.balasEnemigas_array) b.disparar();
+    // dibujar y actualizar balas del jugador
+    for (let i = 0; i < game.balas_array.length; i++) {
+        let b = game.balas_array[i];
+        b.dibujar();
+
+        // si la bala sale del canvas, eliminarla y permitir disparar
+        if (b.y + b.w < 0) {
+            game.balas_array.splice(i, 1);
+            i--;
+            game.disparo = false;
+        }
+    }
+
+    // dibujar y actualizar balas enemigas
+    for (let i = 0; i < game.balasEnemigas_array.length; i++) {
+        let b = game.balasEnemigas_array[i];
+        b.disparar();
+
+        // limpiar balas enemigas fuera del canvas
+        if (b.y > game.canvas.height) {
+            game.balasEnemigas_array.splice(i, 1);
+            i--;
+        }
+    }
+
+    // dibujar enemigos
     for (let e of game.enemigos_array) e.dibujar();
+
+
+    
 };
 
 //---------------------- MOVIMIENTO GRUPAL ----------------------
