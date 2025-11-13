@@ -5,7 +5,7 @@ const KEY_LEFT = 37;
 const KEY_UP = 38;
 const KEY_RIGHT = 39;
 const KEY_DOWN = 40;
-const BARRA = 32; 
+const BARRA = 32;
 
 game = {
     canvas: null,
@@ -20,9 +20,9 @@ game = {
     enemigos_array: [],
     jugador: null,
     x: 0,
-    direccion: 1 // 1 = derecha, -1 = izquierda
+    direccion: 1, // 1 = derecha, -1 = izquierda
+    disparo: false
 };
-
 
 //---------------------- CLASES ----------------------
 
@@ -34,7 +34,7 @@ function bala(x, y, w) {
     this.dibujar = function () {
         game.ctx.save();
         game.ctx.fillStyle = game.colorBala;
-        game.ctx.fillRect(this.x, this.y, this.w, this.w);   
+        game.ctx.fillRect(this.x, this.y, this.w, this.w);
         this.y -= 4;
         game.ctx.restore();
     }
@@ -56,24 +56,22 @@ function enemigo(x, y) {
     this.w = 35;
     this.h = 30;
     this.vive = true;
+    this.figura = false; // Inicializamos figura
 
-    
     this.mover = function (dx, bajar) {
         this.x += dx;
         if (bajar) this.y += 20;
-        this.figura=!this.figura;
+        this.figura = !this.figura;
     }
 
     this.dibujar = function () {
         if (this.figura) {
-            game.ctx.drawImage(game.imagenEnemigo, 0, 0, 40, 30, this.x, this.y, this.w,35,30);
+            game.ctx.drawImage(game.imagenEnemigo, 0, 0, 40, 30, this.x, this.y, this.w, this.h);
         } else {
-            game.ctx.drawImage(game.imagenEnemigo, 50, 0, 35, 30, this.x, this.y, this.w,35,30);
+            game.ctx.drawImage(game.imagenEnemigo, 50, 0, 35, 30, this.x, this.y, this.w, this.h);
         }
     }
-
 }
-
 
 //---------------------- FUNCIONES ----------------------
 
@@ -104,95 +102,84 @@ const inicio = () => {
     animar();
 }
 
-
 const animar = () => {
     requestAnimationFrame(animar);
     verificar();
     pintar();
     moverEnemigos();
-    coliciones()
+    coliciones();
 }
- const coliciones = () => {
-    let enemigo, bala;
-    
-    for(var i=0; i<game.enemigos_array.length; i++){
-        for(var j=0; j<game.balas_array.length; j++){
-            enemigo = game.enemigos_array[i];
-            bala = game.balas_array[j];
 
-            if((enemigo != null) && (bala != null)){
+const coliciones = () => {
+    for (let i = 0; i < game.enemigos_array.length; i++) {
+        let enemigo = game.enemigos_array[i];
+        if (!enemigo) continue;
 
-                if((bala.x>enemigo.x) && 
-                (bala.x<enemigo.x+enemigo.w) &&
-                (bala.y>enemigo.y) && 
-                (bala.y<enemigo.y+enemigo.h)){
-                    enemigo.vive = false;
-                    game.enemigos_array[i] = null;
-                    game.balas_array[j] = null;
-                    game.disparo=false;
-                }
+        for (let j = 0; j < game.balas_array.length; j++) {
+            let bala = game.balas_array[j];
+            if (!bala) continue;
+
+            if (bala.x > enemigo.x &&
+                bala.x < enemigo.x + enemigo.w &&
+                bala.y > enemigo.y &&
+                bala.y < enemigo.y + enemigo.h) {
+
+                // Eliminar enemigo y bala
+                game.enemigos_array[i] = null;
+                game.balas_array[j] = null;
+                game.disparo = false;
             }
         }
     }
+
+    // Limpiar arrays de null para no afectar el movimiento
+    game.enemigos_array = game.enemigos_array.filter(e => e !== null);
+    game.balas_array = game.balas_array.filter(b => b !== null);
 }
 
-
 const verificar = () => {
-    if (game.tecla[KEY_LEFT]) {
-        game.x -= 10;
-    }
-    if (game.tecla[KEY_RIGHT]) {
-        game.x += 10;
-    }
+    if (game.tecla[KEY_LEFT]) game.x -= 10;
+    if (game.tecla[KEY_RIGHT]) game.x += 10;
 
     if (game.x < 0) game.x = 0;
     if (game.x > game.canvas.width - 30) game.x = game.canvas.width - 30;
 }
 
-
 const pintar = () => {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
     game.jugador.dibujar(game.x);
 
-    if (game.teclaPulada === BARRA) {
+    if (game.teclaPulada === BARRA && !game.disparo) {
         game.balas_array.push(new bala(game.jugador.x + 12, game.jugador.y - 3, 5));
         game.teclaPulada = null;
+        game.disparo = true;
     }
 
     for (let i = 0; i < game.balas_array.length; i++) {
-        if (game.balas_array[i]) {
-            game.balas_array[i].dibujar();
-            if (game.balas_array[i].y < 0) game.balas_array[i] = null;
-        }
+        game.balas_array[i].dibujar();
     }
 
     for (let i = 0; i < game.enemigos_array.length; i++) {
-        if (game.enemigos_array[i] != null){
-            game.enemigos_array[i].dibujar();
-        }
+        game.enemigos_array[i].dibujar();
     }
 }
-
 
 //---------------------- MOVIMIENTO GRUPAL ----------------------
 
 let contador = 0;
 function moverEnemigos() {
     contador++;
-    if (contador < 30) return; // controla la velocidad
+    if (contador < 30) return;
     contador = 0;
+
+    if (game.enemigos_array.length === 0) return;
 
     let dx = 10 * game.direccion;
     let bajar = false;
 
-    // Filtrar enemigos que existen
-    const enemigosVivos = game.enemigos_array.filter(e => e !== null);
-
-    if (enemigosVivos.length === 0) return; // si no quedan enemigos, no hacer nada
-
     // calcular límites del grupo
-    let enemigoDerecha = Math.max(...enemigosVivos.map(e => e.x + e.w));
-    let enemigoIzquierda = Math.min(...enemigosVivos.map(e => e.x));
+    let enemigoDerecha = Math.max(...game.enemigos_array.map(e => e.x + e.w));
+    let enemigoIzquierda = Math.min(...game.enemigos_array.map(e => e.x));
 
     if (enemigoDerecha + dx >= game.canvas.width) {
         game.direccion = -1;
@@ -202,7 +189,7 @@ function moverEnemigos() {
         bajar = true;
     }
 
-    for (let enemigo of enemigosVivos) {
+    for (let enemigo of game.enemigos_array) {
         enemigo.mover(dx, bajar);
     }
 }
@@ -224,7 +211,6 @@ window.requestAnimationFrame = (function () {
         function (callback) { window.setTimeout(callback, 17); }
 })();
 
-
 //---------------------- INICIO ----------------------
 
 window.onload = function () {
@@ -236,7 +222,7 @@ window.onload = function () {
 
     game.imagenEnemigo = new Image();
     game.imagenEnemigo.src = "imagenes/invader.fw.png";
-    game.imagenEnemigo.onload = function() {
+    game.imagenEnemigo.onload = function () {
         for (let i = 0; i < 5; i++) {
             for (let j = 0; j < 10; j++) {
                 game.enemigos_array.push(new enemigo(100 + 40 * j, 30 + 45 * i));
