@@ -16,28 +16,41 @@ game = {
     teclaPulada: null,
     tecla: [],
     colorBala: "red",
+    colorBala2: "yellow",
     balas_array: [],
+    balasEnemigas_array: [], // ✅ Faltaba inicializar
     enemigos_array: [],
     jugador: null,
     x: 0,
-    direccion: 1, // 1 = derecha, -1 = izquierda
+    direccion: 1,
     disparo: false
 };
 
 //---------------------- CLASES ----------------------
 
-function bala(x, y, w) {
+function bala(x, y, w, velocidad = 4, color = game.colorBala) {
     this.x = x;
     this.y = y;
     this.w = w;
+    this.velocidad = velocidad;
+    this.color = color;
 
     this.dibujar = function () {
         game.ctx.save();
-        game.ctx.fillStyle = game.colorBala;
+        game.ctx.fillStyle = this.color;
         game.ctx.fillRect(this.x, this.y, this.w, this.w);
-        this.y -= 4;
+        this.y -= this.velocidad;
         game.ctx.restore();
-    }
+    };
+
+    // ✅ método para las balas enemigas
+    this.disparar = function () {
+        game.ctx.save();
+        game.ctx.fillStyle = game.colorBala2;
+        game.ctx.fillRect(this.x, this.y, this.w, this.w);
+        this.y += this.velocidad;
+        game.ctx.restore();
+    };
 }
 
 function jugador(x) {
@@ -47,7 +60,7 @@ function jugador(x) {
     this.dibujar = function (x) {
         this.x = x;
         game.ctx.drawImage(game.imagen, this.x, this.y, 30, 15);
-    }
+    };
 }
 
 function enemigo(x, y) {
@@ -56,13 +69,13 @@ function enemigo(x, y) {
     this.w = 35;
     this.h = 30;
     this.vive = true;
-    this.figura = false; // Inicializamos figura
+    this.figura = false;
 
     this.mover = function (dx, bajar) {
         this.x += dx;
         if (bajar) this.y += 20;
         this.figura = !this.figura;
-    }
+    };
 
     this.dibujar = function () {
         if (this.figura) {
@@ -70,7 +83,7 @@ function enemigo(x, y) {
         } else {
             game.ctx.drawImage(game.imagenEnemigo, 50, 0, 35, 30, this.x, this.y, this.w, this.h);
         }
-    }
+    };
 }
 
 //---------------------- FUNCIONES ----------------------
@@ -82,35 +95,31 @@ const caratula = () => {
     imagen.onload = function () {
         game.caratula = true;
         game.ctx.drawImage(imagen, 0, 0, game.canvas.width, game.canvas.height);
-    }
-}
+    };
+};
 
 const selecionar = () => {
-    if (game.caratula) {
-        inicio();
-    }
-}
+    if (game.caratula) inicio();
+};
 
 const inicio = () => {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
     game.caratula = false;
-
     game.jugador = new jugador(0);
     game.x = game.canvas.width / 2;
-
     game.jugador.dibujar(game.x);
     animar();
-}
+};
 
 const animar = () => {
     requestAnimationFrame(animar);
     verificar();
     pintar();
     moverEnemigos();
-    coliciones();
-}
+    colisiones();
+};
 
-const coliciones = () => {
+const colisiones = () => {
     for (let i = 0; i < game.enemigos_array.length; i++) {
         let enemigo = game.enemigos_array[i];
         if (!enemigo) continue;
@@ -119,12 +128,12 @@ const coliciones = () => {
             let bala = game.balas_array[j];
             if (!bala) continue;
 
-            if (bala.x > enemigo.x &&
+            if (
+                bala.x > enemigo.x &&
                 bala.x < enemigo.x + enemigo.w &&
                 bala.y > enemigo.y &&
-                bala.y < enemigo.y + enemigo.h) {
-
-                // Eliminar enemigo y bala
+                bala.y < enemigo.y + enemigo.h
+            ) {
                 game.enemigos_array[i] = null;
                 game.balas_array[j] = null;
                 game.disparo = false;
@@ -132,10 +141,11 @@ const coliciones = () => {
         }
     }
 
-    // Limpiar arrays de null para no afectar el movimiento
+    // ✅ Limpiar arrays de null
     game.enemigos_array = game.enemigos_array.filter(e => e !== null);
     game.balas_array = game.balas_array.filter(b => b !== null);
-}
+    game.balasEnemigas_array = game.balasEnemigas_array.filter(b => b !== null);
+};
 
 const verificar = () => {
     if (game.tecla[KEY_LEFT]) game.x -= 10;
@@ -143,7 +153,25 @@ const verificar = () => {
 
     if (game.x < 0) game.x = 0;
     if (game.x > game.canvas.width - 30) game.x = game.canvas.width - 30;
-}
+
+    // disparos aleatorios enemigos
+    if (Math.random() > 0.98) dispararEnemigos();
+};
+
+const dispararEnemigos = () => {
+    let ultimos = [];
+    for (let i = game.enemigos_array.length - 1; i >= 0; i--) {
+        if (game.enemigos_array[i] != null) ultimos.push(i);
+        if (ultimos.length === 10) break;
+    }
+
+    if (ultimos.length > 0) {
+        let d = ultimos[Math.floor(Math.random() * ultimos.length)];
+        game.balasEnemigas_array.push(
+            new bala(game.enemigos_array[d].x + game.enemigos_array[d].w / 2, game.enemigos_array[d].y, 5, 4, game.colorBala2)
+        );
+    }
+};
 
 const pintar = () => {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
@@ -155,14 +183,10 @@ const pintar = () => {
         game.disparo = true;
     }
 
-    for (let i = 0; i < game.balas_array.length; i++) {
-        game.balas_array[i].dibujar();
-    }
-
-    for (let i = 0; i < game.enemigos_array.length; i++) {
-        game.enemigos_array[i].dibujar();
-    }
-}
+    for (let b of game.balas_array) b.dibujar();
+    for (let b of game.balasEnemigas_array) b.disparar();
+    for (let e of game.enemigos_array) e.dibujar();
+};
 
 //---------------------- MOVIMIENTO GRUPAL ----------------------
 
@@ -172,14 +196,14 @@ function moverEnemigos() {
     if (contador < 30) return;
     contador = 0;
 
-    if (game.enemigos_array.length === 0) return;
+    let enemigosVivos = game.enemigos_array.filter(e => e !== null);
+    if (enemigosVivos.length === 0) return;
 
     let dx = 10 * game.direccion;
     let bajar = false;
 
-    // calcular límites del grupo
-    let enemigoDerecha = Math.max(...game.enemigos_array.map(e => e.x + e.w));
-    let enemigoIzquierda = Math.min(...game.enemigos_array.map(e => e.x));
+    let enemigoDerecha = Math.max(...enemigosVivos.map(e => e.x + e.w));
+    let enemigoIzquierda = Math.min(...enemigosVivos.map(e => e.x));
 
     if (enemigoDerecha + dx >= game.canvas.width) {
         game.direccion = -1;
@@ -189,9 +213,7 @@ function moverEnemigos() {
         bajar = true;
     }
 
-    for (let enemigo of game.enemigos_array) {
-        enemigo.mover(dx, bajar);
-    }
+    for (let enemigo of enemigosVivos) enemigo.mover(dx, bajar);
 }
 
 //---------------------- LISTENERS ----------------------
@@ -208,7 +230,7 @@ window.addEventListener("keyup", function (e) {
 window.requestAnimationFrame = (function () {
     return window.requestAnimationFrame ||
         window.webkitRequestAnimationFrame ||
-        function (callback) { window.setTimeout(callback, 17); }
+        function (callback) { window.setTimeout(callback, 17); };
 })();
 
 //---------------------- INICIO ----------------------
@@ -228,8 +250,8 @@ window.onload = function () {
                 game.enemigos_array.push(new enemigo(100 + 40 * j, 30 + 45 * i));
             }
         }
-    }
+    };
 
     caratula();
     game.canvas.addEventListener("click", selecionar, false);
-}
+};
